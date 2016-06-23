@@ -1,0 +1,42 @@
+# Copyright (c) 2016 Kazumasa Kohtaka. All rights reserved.
+# This file is available under the MIT license.
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: es-master
+  labels:
+    component: elasticsearch
+    role: master
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: elasticsearch
+      role: master
+  template:
+    metadata:
+      name: es-master
+      labels:
+        component: elasticsearch
+        role: master
+    spec:
+      containers:
+      - name: es-master
+        image: elasticsearch:2.3.3
+        args:
+        - -Des.cluster.name=graylog
+        - -Des.node.master=true
+        - -Des.node.data=false
+        - -Des.http.enabled=false
+        - -Ddiscovery.zen.minimum_master_nodes=2
+        ports:
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: storage
+      volumes:
+      - name: storage
+        emptyDir: {}

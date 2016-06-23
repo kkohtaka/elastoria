@@ -1,0 +1,45 @@
+# Copyright (c) 2016 Kazumasa Kohtaka. All rights reserved.
+# This file is available under the MIT license.
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: es-client
+  labels:
+    component: elasticsearch
+    role: client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: elasticsearch
+      role: client
+  template:
+    metadata:
+      name: es-client
+      labels:
+        component: elasticsearch
+        role: client
+    spec:
+      containers:
+      - name: es-client
+        image: elasticsearch:2.3.3
+        args:
+        - -Des.cluster.name=graylog
+        - -Des.node.master=false
+        - -Des.node.data=false
+        - -Des.http.enabled=true
+        - -Ddiscovery.zen.minimum_master_nodes=2
+        ports:
+        - containerPort: 9200
+          name: http
+          protocol: TCP
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: storage
+      volumes:
+      - name: storage
+        emptyDir: {}

@@ -1,0 +1,42 @@
+# Copyright (c) 2016 Kazumasa Kohtaka. All rights reserved.
+# This file is available under the MIT license.
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: es-data
+  labels:
+    component: elasticsearch
+    role: data
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      component: elasticsearch
+      role: data
+  template:
+    metadata:
+      name: es-data
+      labels:
+        component: elasticsearch
+        role: data
+    spec:
+      containers:
+      - name: es-data
+        image: elasticsearch:2.3.3
+        args:
+        - -Des.cluster.name=graylog
+        - -Des.node.master=false
+        - -Des.node.data=true
+        - -Des.http.enabled=false
+        - -Ddiscovery.zen.minimum_master_nodes=2
+        ports:
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: storage
+      volumes:
+      - name: storage
+        emptyDir: {}

@@ -1,0 +1,110 @@
+# Copyright (c) 2016 Kazumasa Kohtaka. All rights reserved.
+# This file is available under the MIT license.
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: elasticsearch
+  labels:
+    component: ingress-controller
+spec:
+  rules:
+  - host: elasticsearch.dev
+    http:
+      paths:
+      - backend:
+          serviceName: elasticsearch
+          servicePort: 9200
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: nginx-ingress-controller
+  labels:
+    component: ingress-controller
+spec:
+  selector:
+    matchLabels:
+      k8s-app: nginx-ingress-lb
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress-lb
+        k8s-app: nginx-ingress-lb
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: graylog-web-lb
+        image: gcr.io/google_containers/nginx-ingress-controller:0.7
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+        - containerPort: 80
+          hostPort: 80
+        args:
+        - /nginx-ingress-controller
+        - --default-backend-service=default/default-http-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: default-http-backend
+  labels:
+    component: ingress-controller
+spec:
+  selector:
+    app: default-http-backend
+    component: ingress-controller
+  ports:
+  - name: http
+    port: 9200
+    protocol: TCP
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: default-http-backend
+  labels:
+    component: ingress-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: default-http-backend
+      component: ingress-controller
+  template:
+    metadata:
+      labels:
+        app: default-http-backend
+        component: ingress-controller
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: default-http-backend
+        # Any image is permissable as long as:
+        # 1. It serves a 404 page at /
+        # 2. It serves 200 on a /healthz endpoint
+        image: gcr.io/google_containers/defaultbackend:1.0
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 10m
+            memory: 20Mi
+          requests:
+            cpu: 10m
+            memory: 20Mi
